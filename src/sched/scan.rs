@@ -1,8 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::sched::DiskReq;
-
-use super::{DiskSchedAlgo, DiskState, Result};
+use super::{DiskReq, DiskSchedAlgo, DiskState, Result, Utils};
 
 pub struct SCAN;
 
@@ -17,18 +15,7 @@ impl DiskSchedAlgo for SCAN {
             .make_contiguous()
             .sort_by(|v1, v2| v1.get_request_address().cmp(&v2.get_request_address()));
         let mut result_queue = VecDeque::new();
-        let closet_idx = if cur <= queue[0].get_request_address() {
-            0
-        } else if cur >= queue[queue.len() - 1].get_request_address() {
-            queue.len() - 1
-        } else {
-            queue
-                .iter()
-                .enumerate()
-                .min_by_key(|(_, v)| (v.get_request_address() as i64 - cur as i64).abs())
-                .map(|(index, _)| index)
-                .unwrap()
-        };
+        let closet_idx = Utils::found_closet_req_index(cur, &queue);
         if cur >= queue[closet_idx].get_request_address() {
             // go downward then upward
             for idx in (0..=closet_idx).rev() {

@@ -25,8 +25,8 @@ mod sstf; /* 短寻道时间优先算法 */
 */
 
 // TODO: 用链表实现以便于移植到嵌入式设备上，以及减少Vec使用的内存碎片和随机插入删除造成的性能浪费
+// TODO：考虑修改结构以纳入IO缓存并实现CFQ、Deadline、Noop调度算法，此举会破坏KISS原则，应当另开一个库
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Error {
     AlgoError(Option<String>),
@@ -65,12 +65,31 @@ pub trait DiskState {
 
 pub trait DiskReq {
     fn get_request_address(&self) -> u64;
+    // TODO: get request type
 }
 
-// 磁盘调度算法
 pub trait DiskSchedAlgo {
     fn do_algo<'a>(
         disk_state: &dyn DiskState,
         queue: VecDeque<&'a dyn DiskReq>,
     ) -> Result<VecDeque<&'a dyn DiskReq>>;
+}
+
+pub(crate) struct Utils {}
+
+impl Utils {
+    pub(crate) fn found_closet_req_index(cur: u64, queue: &VecDeque<&dyn DiskReq>) -> usize {
+        if cur <= queue[0].get_request_address() {
+            0
+        } else if cur >= queue[queue.len() - 1].get_request_address() {
+            queue.len() - 1
+        } else {
+            queue
+                .iter()
+                .enumerate()
+                .min_by_key(|(_, v)| (v.get_request_address() as i64 - cur as i64).abs())
+                .map(|(index, _)| index)
+                .unwrap()
+        }
+    }
 }

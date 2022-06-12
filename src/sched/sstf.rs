@@ -1,8 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::sched::DiskReq;
-
-use super::{Direction, DiskSchedAlgo, DiskState, Result};
+use super::{Direction, DiskReq, DiskSchedAlgo, DiskState, Error, Result, Utils};
 
 pub struct SSTF;
 
@@ -17,22 +15,13 @@ impl DiskSchedAlgo for SSTF {
         mut queue: VecDeque<&'a dyn DiskReq>,
     ) -> Result<VecDeque<&'a dyn DiskReq>> {
         let cur = disk_state.get_current_position();
+        // Sort queue by address order
         queue
             .make_contiguous()
             .sort_by(|v1, v2| v1.get_request_address().cmp(&v2.get_request_address()));
         let mut result_queue = VecDeque::new();
-        let mut closet_idx = if cur <= queue[0].get_request_address() {
-            0
-        } else if cur >= queue[queue.len() - 1].get_request_address() {
-            queue.len() - 1
-        } else {
-            queue
-                .iter()
-                .enumerate()
-                .min_by_key(|(_, v)| (v.get_request_address() as i64 - cur as i64).abs())
-                .map(|(index, _)| index)
-                .unwrap()
-        };
+        // fount cloest addr with current position
+        let mut closet_idx = Utils::found_closet_req_index(cur, &queue);
         let mut move_direction = if cur > queue[closet_idx].get_request_address() {
             Direction::Dec
         } else {
@@ -61,7 +50,11 @@ impl DiskSchedAlgo for SSTF {
                     closet_idx = match move_direction {
                         Direction::Dec => closet_idx - 1,
                         Direction::Inc => closet_idx,
-                        Direction::Stop => panic!("Cannot stop."),
+                        Direction::Stop => {
+                            return Err(Error::AlgoError(Some(
+                                "Direction cannot be stop.".to_string(),
+                            )));
+                        }
                     };
                 } else {
                     closet_idx -= 1;
