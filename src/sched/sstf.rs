@@ -22,6 +22,9 @@ impl DiskSchedAlgo for SSTF {
         let mut result_queue = VecDeque::new();
         // fount cloest addr with current position
         let mut closet_idx = Utils::found_closet_req_index(cur, &queue);
+        // initial direction of current pos to closed pos
+        // direction is used when the seek time is identical
+        // in that context, we chose the same direction.
         let mut move_direction = if cur > queue[closet_idx].get_request_address() {
             Direction::Dec
         } else {
