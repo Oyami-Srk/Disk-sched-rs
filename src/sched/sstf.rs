@@ -37,9 +37,11 @@ impl DiskSchedAlgo for SSTF {
                 break;
             }
             if closet_idx == queue.len() {
+                // this is the most right one, must go left
                 closet_idx -= 1;
                 move_direction = Direction::Dec;
             } else if closet_idx != 0 {
+                // get left and right seek length
                 let left = (cur_req.get_request_address() as i64
                     - queue[closet_idx - 1].get_request_address() as i64)
                     .abs();
@@ -47,6 +49,7 @@ impl DiskSchedAlgo for SSTF {
                     - queue[closet_idx].get_request_address() as i64)
                     .abs();
                 if right < left {
+                    // go right, no need for change closet idx
                     move_direction = Direction::Inc;
                 } else if right == left {
                     // When seek time is same, we chose the same direction.
@@ -60,10 +63,12 @@ impl DiskSchedAlgo for SSTF {
                         }
                     };
                 } else {
+                    // go left, idx--
                     closet_idx -= 1;
                     move_direction = Direction::Dec;
                 }
             }
+            // push req to result queue
             result_queue.push_back(cur_req);
         }
         Ok(result_queue)

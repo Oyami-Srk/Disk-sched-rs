@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use crate::sched::Direction;
+
 use super::{DiskReq, DiskSchedAlgo, DiskState, Result, Utils};
 
 pub struct SCAN;
@@ -16,7 +18,18 @@ impl DiskSchedAlgo for SCAN {
             .sort_by(|v1, v2| v1.get_request_address().cmp(&v2.get_request_address()));
         let mut result_queue = VecDeque::new();
         let closet_idx = Utils::found_closet_req_index(cur, &queue);
-        if cur >= queue[closet_idx].get_request_address() {
+        let direction = match disk_state.get_current_direction() {
+            Direction::Inc => Direction::Inc,
+            Direction::Dec => Direction::Dec,
+            Direction::Stop => {
+                if cur >= queue[closet_idx].get_request_address() {
+                    Direction::Dec
+                } else {
+                    Direction::Inc
+                }
+            }
+        };
+        if let Direction::Dec = direction {
             // go downward then upward
             for idx in (0..=closet_idx).rev() {
                 result_queue.push_back(queue.remove(idx).unwrap());
